@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import Column, String, Integer, create_engine
+from sqlalchemy import Column, String, Integer, create_engine, DateTime
 from flask_sqlalchemy import SQLAlchemy
 import json
 from dotenv import dotenv_values
@@ -26,7 +26,9 @@ def setup_db(app, database_path=database_path):
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.app = app
     db.init_app(app)
-    db.create_all()
+    with app.app_context():
+        db.create_all()
+    # db.create_all()
 
 
 """
@@ -36,13 +38,14 @@ Movie
 
 
 class Movie(db.Model):
-    __tablename__ = "movie"
+    __tablename__ = "movies"
 
-    id = Column(Integer, primary_key=True)
-    title = Column(String)
-    release_date = Column(String)
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String)
+    release_date = db.Column(db.DateTime)
     
     def __init__(self, title, release_date):
+        self.type = type
         self.title = title
         self.release_date = release_date
 
@@ -72,12 +75,12 @@ Actor
 
 
 class Actor(db.Model):
-    __tablename__ = "actor"
+    __tablename__ = "actors"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    age = Column(Integer)
-    gender = Column(String)
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    age = db.Column(db.Integer)
+    gender = db.Column(db.String)
 
     def __init__(self, name, age, gender):
         self.type = type

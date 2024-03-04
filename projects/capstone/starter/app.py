@@ -2,11 +2,29 @@ import os
 from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from models import setup_db, Actor, Movie
+from flask_migrate import Migrate
+from models import *
 
 def create_app(test_config=None):
   # create and configure the app
   app = Flask(__name__)
+  setup_db(app)
   CORS(app)
+
+  # defining migrate
+#   db.init_app(app)
+  migrate = Migrate(app, db)
+
+  @app.after_request
+  def after_request(response):
+        response.headers.add(
+            "Access-Control-Allow-Headers", "Content-Type, Authorization"
+        )
+        response.headers.add(
+            "Access-Control-Allow-Headers", "GET, POST, PATCH, DELETE, OPTIONS"
+        )
+        return response
 
 #   Endpoints:
 # GET /actors and /movies
@@ -17,13 +35,14 @@ def create_app(test_config=None):
   @app.route("/")
   def welcome_page():
       return "Casting Agency Home Page"
+#   return apps
 
 
   # GET endpoint to get the list of actors
   @app.route("/actors", methods=["GET"])
   def get_drinks():
       actors = Actor.query.order_by(Actor.id).all()
-      formatted_actors = [actor.short() for actor in actors]
+      formatted_actors = [actor.format() for actor in actors]
       try:
           return jsonify({"success": True, "actors": formatted_actors})
       except Exception as e:
@@ -35,7 +54,7 @@ def create_app(test_config=None):
   @app.route("/movies", methods=["GET"])
   def get_movies():
       movies = Movie.query.order_by(Movie.id).all()
-      formatted_movies = [movie.short() for movie in movies]
+      formatted_movies = [movie.format() for movie in movies]
       try:
           return jsonify({"success": True, "movies": formatted_movies})
       except Exception as e:
@@ -45,7 +64,7 @@ def create_app(test_config=None):
   # DELETE enpoint to delete an actor from db
   @app.route("/actors/<int:id>", methods=["DELETE"])
   # @requires_auth("delete:actors")
-  def delete_actors(payload, id):
+  def delete_actors(id):
     actor = Actor.query.filter(Actor.id == id).one_or_none()
     if actor is None:
         abort(404)
@@ -59,7 +78,7 @@ def create_app(test_config=None):
   # DELETE enpoint to delete a movie from db
   @app.route("/movies/<int:id>", methods=["DELETE"])
   # @requires_auth("delete:movies")
-  def delete_movies(payload, id):
+  def delete_movies(id):
     movie = Movie.query.filter(Movie.id == id).one_or_none()
     if movie is None:
         abort(404)
@@ -73,7 +92,7 @@ def create_app(test_config=None):
   # POST endpoint to add an actor to db
   @app.route("/actors", methods=["POST"])
   # @requires_auth("post:actors")
-  def add_actor(payload):
+  def add_actor():
     body = request.get_json()
     if "name" not in body or "age" not in body or "gender" not in body:
         abort(400)
@@ -88,12 +107,12 @@ def create_app(test_config=None):
         print(e)
         abort(404)
 
-    return jsonify({"success": True, "actors": [actor.long()]})
+    return jsonify({"success": True, "actors": [actor.format()]})
   
   # POST endpoint to add a movie to db
   @app.route("/movies", methods=["POST"])
   # @requires_auth("post:movies")
-  def add_movies(payload):
+  def add_movies():
     body = request.get_json()
     if "title" not in body or "release_date" not in body:
         abort(400)
@@ -101,31 +120,61 @@ def create_app(test_config=None):
         new_title = body.get("title")
         new_release_date = body.get("release_date")
         movie = Movie(title=new_title, release_date=new_release_date)
+        print(movie)
         movie.insert()
 
     except Exception as e:
         print(e)
         abort(404)
 
+    return jsonify({"success": True, "movie": [movie.format()]})
+
   # PATCH endpoint to update an actor
   @app.route("/actors/<int:id>", methods=["PATCH"])
   # @requires_auth("patch:actors")
-  def patch_actors(payload, id):
+  def patch_actors(id):
     body = request.get_json()
-    if "title" not in body:
-        abort(400)
+    actor = Actor.query.filter_by(id=id).one_or_none()
+    if actor is None:
+        abort(404)
+    if "name" in body:
+        actor.name = body.get("name")
+    if "age" in body:
+        actor.age = body.get("age")
+    if "gender" in body: 
+        actor.gender = body.get("gender")
+        
     try:
-        updated_title = body.get("title")
-        drink = Drink.query.filter(Drink.id == id).one_or_none()
-        drink.title = updated_title
-        drink.update()
+        actor.update()
 
     except Exception as e:
         print(e)
         abort(404)
 
-    return jsonify({"success": True, "drinks": [drink.long()]})
+    return jsonify({"success": True, "movie": [actor.format()]})
+  
+
   # PATCH endpoint to update a movie
+  @app.route("/movies/<int:id>", methods=["PATCH"])
+  # @requires_auth("patch:actors")
+  def patch_movies(id):
+    body = request.get_json()
+    movie = Movie.query.filter_by(id=id).one_or_none()
+    if movie is None:
+        abort(404)
+    if "title" in body:
+        movie.title = body.get("title")
+    if "release_date" in body:
+        movie.release_date = body.get("release_date")
+        
+    try:
+        movie.update()
+
+    except Exception as e:
+        print(e)
+        abort(404)
+
+    return jsonify({"success": True, "movie": [movie.format()]})
 
   # Error handlers
   @app.errorhandler(404)
