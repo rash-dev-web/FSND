@@ -1,1 +1,2 @@
 Single-database configuration for Flask.
+1. Update the .env file for Postgres details.
